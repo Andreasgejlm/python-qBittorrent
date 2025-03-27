@@ -842,3 +842,50 @@ class Client:
         data = self._process_infohash_list(infohash_list)
         data.update({"value": json.dumps(value)})
         return self._post("torrents/setSuperSeeding", data=data)
+
+    def search(self, name, plugin="all", limit=500, offset=0):
+        """
+        Search for a torrent with the builtin search engine.
+        :param name: name of torrent searched -> string.
+        :param plugin: plugin used (default all, enabled for all the active ones) -> string.
+        :param limit: result limit to return (default 500) -> int.
+        :param offset: offset (default 0) -> int.
+        """
+
+        id = self._post(
+            'search/start', {'pattern': name, 'category': 'all', 'plugins': plugin})
+
+        # Wait while the search is running
+        while self._post('search/results',
+                         {'id': id['id'],
+                          'limit': str(limit),
+                          'offset': str(offset)})['status'] == "Running":
+            sleep(0.5)
+
+        # When finished return the results
+        return self._post('search/results', {'id': id['id'], 'limit': str(limit), 'offset': str(offset)})
+
+    def list_search_plugins(self):
+        return self._get('search/plugins')
+
+    def add_search_plugin(self, url):
+        """
+        Add search plugin.
+        :param url: url of the raw file (see https://github.com/qbittorrent/search-plugins/wiki/Unofficial-search-plugins for precisions)
+        """
+        return self._post('search/installPlugin', {'sources': url})
+
+    def disable_search_plugin(self, name):
+        """
+        Disable a specific search plugin.
+        :param name: plugin name.
+        """
+
+        return self._post('search/enablePlugin', {'names': name, 'enable': 'false'})
+
+    def enable_search_plugin(self, name):
+        """
+        Enable a specific search plugin.
+        """
+
+        return self._post('search/enablePlugin', {'names': name, 'enable': 'true'})
